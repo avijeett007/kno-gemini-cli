@@ -69,3 +69,26 @@ The Gemini CLI requires you to authenticate with Google's AI services. On initia
           echo 'export GOOGLE_GENAI_USE_VERTEXAI=true' >> ~/.bashrc
           source ~/.bashrc
           ```
+
+4.  **OAuth Environment Variables (Advanced):**
+
+    - For Code Assist features, you can override the default OAuth client credentials using environment variables:
+      - **GEMINI_OAUTH_CLIENT_ID**: Override the default OAuth client ID
+      - **GEMINI_OAUTH_CLIENT_SECRET**: Override the default OAuth client secret
+      - **GEMINI_OAUTH_CREDENTIALS_JSON**: Provide full OAuth credentials as a JSON string (alternative to individual client ID/secret)
+      
+      - You can temporarily set these environment variables in your current shell session using the following commands:
+        ```bash
+        export GEMINI_OAUTH_CLIENT_ID="your_oauth_client_id"
+        export GEMINI_OAUTH_CLIENT_SECRET="your_oauth_client_secret"
+        # Or provide full credentials as JSON
+        export GEMINI_OAUTH_CREDENTIALS_JSON='{"client_id":"...","client_secret":"...","refresh_token":"..."}'
+        ```
+      - For repeated use, you can add the environment variables to your `.env` file (located in the project directory or user home directory) or your shell's configuration file (like `~/.bashrc`, `~/.zshrc`, or `~/.profile`). For example, the following commands add the environment variables to a `~/.bashrc` file:
+        ```bash
+        echo 'export GEMINI_OAUTH_CLIENT_ID="your_oauth_client_id"' >> ~/.bashrc
+        echo 'export GEMINI_OAUTH_CLIENT_SECRET="your_oauth_client_secret"' >> ~/.bashrc
+        source ~/.bashrc
+        ```
+      
+      **Note:** These environment variables are optional. If not set, the CLI will use the default OAuth credentials for Code Assist authentication. This is useful for custom OAuth applications or when you need to use different credentials for different environments.

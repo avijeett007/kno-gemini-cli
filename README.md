@@ -34,6 +34,21 @@ If you need to use a specific model or require a higher request capacity, you ca
    export GEMINI_API_KEY="YOUR_API_KEY"
    ```
 
+### OAuth Configuration (Advanced)
+
+For Code Assist features, you can override the default OAuth client credentials using environment variables:
+
+```bash
+# Override OAuth Client ID and Secret
+export GEMINI_OAUTH_CLIENT_ID="your_oauth_client_id"
+export GEMINI_OAUTH_CLIENT_SECRET="your_oauth_client_secret"
+
+# Or provide full OAuth credentials as JSON
+export GEMINI_OAUTH_CREDENTIALS_JSON='{"client_id":"...","client_secret":"...","refresh_token":"..."}'
+```
+
+**Note:** These environment variables are optional. If not set, the CLI will use the default OAuth credentials for Code Assist authentication.
+
 For other authentication methods, including Google Workspace accounts, see the [authentication](./docs/cli/authentication.md) guide.
 
 ## Examples

@@ -252,6 +252,15 @@ The CLI automatically loads environment variables from an `.env` file. The loadi
 - **`GOOGLE_APPLICATION_CREDENTIALS`** (string):
   - **Description:** The path to your Google Application Credentials JSON file.
   - **Example:** `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/credentials.json"`
+- **`GEMINI_OAUTH_CLIENT_ID`** (string):
+  - **Description:** Override the default OAuth client ID for Code Assist authentication.
+  - **Example:** `export GEMINI_OAUTH_CLIENT_ID="your_oauth_client_id"`
+- **`GEMINI_OAUTH_CLIENT_SECRET`** (string):
+  - **Description:** Override the default OAuth client secret for Code Assist authentication.
+  - **Example:** `export GEMINI_OAUTH_CLIENT_SECRET="your_oauth_client_secret"`
+- **`GEMINI_OAUTH_CREDENTIALS_JSON`** (string):
+  - **Description:** Provide full OAuth credentials as a JSON string (alternative to individual client ID/secret).
+  - **Example:** `export GEMINI_OAUTH_CREDENTIALS_JSON='{"client_id":"...","client_secret":"...","refresh_token":"..."}'`
 - **`OTLP_GOOGLE_CLOUD_PROJECT`**:
   - Your Google Cloud Project ID for Telemetry in Google Cloud
   - Example: `export OTLP_GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID"`.
