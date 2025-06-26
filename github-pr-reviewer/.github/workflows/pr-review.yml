@@ -1,0 +1,50 @@
+name: Gemini PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Get PR Diff
+        id: pr_diff
+        run: |
+          diff_content=$(git diff origin/${{ github.base_ref }}...origin/${{ github.head_ref }})
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$diff_content" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Gemini CLI
+        run: npm install -g @google/gemini-cli
+
+      - name: Run Gemini Review
+        id: gemini_review
+        env:
+          GEMINI_OAUTH_CREDENTIALS_JSON: ${{ secrets.GEMINI_OAUTH_CREDENTIALS_JSON }}
+        run: |
+          review_prompt="You are an expert software engineer. Review the following code changes for potential bugs, style issues, and improvements. Provide your feedback as a list of concise points. Diff:\n\n${{ steps.pr_diff.outputs.diff }}"
+          review_output=$(gemini -p "$review_prompt")
+          echo "review<<EOF" >> $GITHUB_OUTPUT
+          echo "$review_output" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post Review Comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment $PR_NUMBER --body "**Gemini Code Review:**\n\n${{ steps.gemini_review.outputs.review }}"
