@@ -23,6 +23,10 @@ This action uses the credentials from the interactive "Login with Google" flow. 
     *   In the GitHub repository where you want to use this action, navigate to `Settings > Secrets and variables > Actions`.
     *   Click `New repository secret`.
     *   Create a secret named `GEMINI_OAUTH_CREDENTIALS_JSON` and paste the JSON content you copied from the `oauth_creds.json` file.
+    *   **Important:** The content should be a single line of JSON. It should look something like this (your values will be different):
+    *   ```json
+      {"access_token":"ya29.a0Af...","refresh_token":"1//0g...","scope":"https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile","token_type":"Bearer","expiry_date":1729...}
+      ```
 
 5.  **Add the Workflow File:**
     *   Copy the `.github/workflows/pr-review.yml` file from this directory into the `.github/workflows` directory of your repository.
