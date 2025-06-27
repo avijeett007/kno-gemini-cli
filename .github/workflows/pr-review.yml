@@ -91,19 +91,19 @@ jobs:
           echo "✅ OAuth credentials file created at $HOME/.gemini/oauth_creds.json"
           
           # Create a settings.json file that forces OAuth authentication
-          cat > $HOME/.gemini/settings.json << 'EOF'
+          cat > $HOME/.gemini/settings.json << 'SETTINGS_EOF'
           {
             "selectedAuthType": "oauth-personal"
           }
-          EOF
+          SETTINGS_EOF
           echo "✅ Settings file created at $HOME/.gemini/settings.json"
           
           # Create a temporary file for the review prompt to avoid shell parsing issues
-          cat > /tmp/review_prompt.txt << 'EOF'
+          cat > /tmp/review_prompt.txt << 'PROMPT_EOF'
           You are an expert software engineer. Review the following code changes for potential bugs, style issues, and improvements. Provide your feedback as a list of concise points.
           
           Diff:
-          EOF
+          PROMPT_EOF
           
           # Append the diff to the prompt file
           echo "${{ steps.pr_diff.outputs.diff }}" >> /tmp/review_prompt.txt
@@ -153,11 +153,11 @@ jobs:
               echo "🔄 Switching to API key authentication..."
               
               # Create settings for API key authentication
-              cat > $HOME/.gemini/settings.json << 'EOF'
+              cat > $HOME/.gemini/settings.json << 'API_KEY_EOF'
               {
                 "selectedAuthType": "gemini-api-key"
               }
-              EOF
+              API_KEY_EOF
               
               # Try again with API key
               echo "Retrying with API key authentication..."
