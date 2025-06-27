@@ -166,31 +166,44 @@ export function getAvailablePort(): Promise<number> {
 async function loadCachedCredentials(client: OAuth2Client): Promise<boolean> {
   try {
     let creds: string | undefined;
+    console.log('Attempting to load cached credentials...');
     if (process.env.GEMINI_OAUTH_CREDENTIALS_JSON) {
+      console.log('GEMINI_OAUTH_CREDENTIALS_JSON environment variable found.');
       creds = process.env.GEMINI_OAUTH_CREDENTIALS_JSON;
     } else {
+      console.log('GEMINI_OAUTH_CREDENTIALS_JSON not found. Checking local file system.');
       const keyFile =
         process.env.GOOGLE_APPLICATION_CREDENTIALS || getCachedCredentialPath();
       creds = await fs.readFile(keyFile, 'utf-8');
+      console.log(`Read credentials from file: ${keyFile}`);
     }
 
     if (!creds) {
+      console.log('No credentials content found.');
       return false;
     }
 
+    console.log('Attempting to parse credentials JSON...');
     client.setCredentials(JSON.parse(creds));
+    console.log('Credentials JSON parsed successfully.');
 
     // This will verify locally that the credentials look good.
+    console.log('Attempting to get access token...');
     const { token } = await client.getAccessToken();
     if (!token) {
+      console.log('No access token obtained.');
       return false;
     }
+    console.log('Access token obtained.');
 
     // This will check with the server to see if it hasn't been revoked.
+    console.log('Checking token validity with server...');
     await client.getTokenInfo(token);
+    console.log('Token is valid with server.');
 
     return true;
-  } catch (_) {
+  } catch (e) {
+    console.error('Error loading cached credentials:', e);
     return false;
   }
 }

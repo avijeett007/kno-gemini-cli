@@ -2,6 +2,25 @@
 
 This is a fork of the [Gemini CLI](https://github.com/google-gemini/gemini-cli), an open-source tool from Google, licensed under the Apache License 2.0. This version has been modified to support additional features, including the ability to use OAuth credentials for CI/CD workflows.
 
+## Stay Updated
+
+<div align="center">
+  <a href="https://youtube.com/@kno2gether">
+    <img src="./assets/kno-gemini-banner.svg" alt="Kno-Gemini CLI" width="600px"/>
+  </a>
+
+  <h3>Subscribe to Our YouTube Channel!</h3>
+  
+  [![Subscribe to Kno2gether](https://img.shields.io/youtube/channel/subscribers/UCQ9YqJ_pxqk6R9Vv_hzXH5A?style=for-the-badge&logo=youtube&logoColor=red)](https://youtube.com/@kno2gether)
+</div>
+
+Stay up to date with the latest features, tutorials, and tips about Kno-Gemini-CLI by subscribing to our YouTube channel. We're constantly enhancing this tool with exciting new capabilities to make your development experience even better!
+
+---
+
+
+
+
 ## Quickstart
 
 1. **Prerequisites:** Ensure you have [Node.js version 18](https://nodejs.org/en/download) or higher installed.
