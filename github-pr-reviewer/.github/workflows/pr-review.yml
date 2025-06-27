@@ -38,9 +38,13 @@ jobs:
         run: |
           export GEMINI_OAUTH_CREDENTIALS_JSON='${{ secrets.GEMINI_OAUTH_CREDENTIALS_JSON }}'
           review_prompt="You are an expert software engineer. Review the following code changes for potential bugs, style issues, and improvements. Provide your feedback as a list of concise points. Diff:\n\n${{ steps.pr_diff.outputs.diff }}"
-          # Use a unique delimiter to avoid issues with EOF in the output
+          # Escape the prompt for safe passing as a command-line argument
+          ESCAPED_PROMPT=$(printf %q "$review_prompt")
+
+          # Use a unique delimiter for GITHUB_OUTPUT to avoid issues with EOF in the output
           DELIMITER=$(openssl rand -hex 16)
-          review_output=$(echo "$review_prompt" | gemini)
+
+          review_output=$(gemini -p "$ESCAPED_PROMPT")
           echo "review<<$DELIMITER" >> $GITHUB_OUTPUT
           echo "$review_output" >> $GITHUB_OUTPUT
           echo "$DELIMITER" >> $GITHUB_OUTPUT
