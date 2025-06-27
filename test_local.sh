@@ -37,15 +37,10 @@ EOF_DIFF
 echo "Constructing review prompt..."
 REVIEW_PROMPT="You are an expert software engineer. Review the following code changes for potential bugs, style issues, and improvements. Provide your feedback as a list of concise points. Diff:\n\n${SAMPLE_DIFF}"
 
-# 4. Escape the prompt for safe passing as a command-line argument
-# This mimics the 'ESCAPED_PROMPT=$(printf %q "$review_prompt")' in the GitHub Action.
-echo "Escaping prompt for command-line argument..."
-ESCAPED_PROMPT=$(printf %q "$REVIEW_PROMPT")
-
-# 5. Run your kno-gemini-cli with the escaped prompt
+# 4. Run your kno-gemini-cli with the prompt piped to stdin
 # Make sure the path to 'dist/index.js' is correct relative to your current directory.
 # This will execute your modified CLI.
 echo "Running kno-gemini-cli locally..."
-./packages/cli/dist/index.js -p "$ESCAPED_PROMPT"
+echo "$REVIEW_PROMPT" | ./packages/cli/dist/index.js -p
 
 echo "--- Local Test Simulation Complete ---"
