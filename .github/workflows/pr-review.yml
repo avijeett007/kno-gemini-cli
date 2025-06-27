@@ -65,6 +65,21 @@ jobs:
           which gemini || echo "❌ gemini command not found in PATH"
           gemini --version || echo "❌ gemini --version failed"
           
+          # In GitHub Actions, we need to use the runner's home directory
+          echo "Setting up OAuth authentication for GitHub Actions..."
+          mkdir -p $HOME/.gemini
+          
+          # Create a settings.json file that forces OAuth authentication
+          cat > $HOME/.gemini/settings.json << 'EOF'
+          {
+            "selectedAuthType": "oauth-personal"
+          }
+          EOF
+          
+          # Debug: Check the settings file
+          echo "Settings file created at $HOME/.gemini/settings.json:"
+          cat $HOME/.gemini/settings.json
+          
           # Create a temporary file for the review prompt to avoid shell parsing issues
           cat > /tmp/review_prompt.txt << 'EOF'
           You are an expert software engineer. Review the following code changes for potential bugs, style issues, and improvements. Provide your feedback as a list of concise points.
@@ -79,13 +94,16 @@ jobs:
           echo "Review prompt file created:"
           wc -l /tmp/review_prompt.txt
           
-          # Run the review using the prompt file
-          echo "Running Gemini review..."
-          review_output=$(cat /tmp/review_prompt.txt | gemini -p)
+          # Run the review using the prompt file with OAuth authentication
+          # Use --yolo flag to avoid interactive prompts in headless environment
+          echo "Running Gemini review with OAuth authentication..."
+          review_output=$(cat /tmp/review_prompt.txt | gemini --yolo -p)
           
           # Debug: Check the output
           if [ -n "$review_output" ]; then
             echo "✅ Review output generated (${#review_output} characters)"
+            echo "First 200 characters of review:"
+            echo "$review_output" | head -c 200
           else
             echo "❌ No review output generated"
             exit 1
@@ -93,6 +111,7 @@ jobs:
           
           # Clean up
           rm /tmp/review_prompt.txt
+          rm -f $HOME/.gemini/settings.json
           
           # Use a unique delimiter for GITHUB_OUTPUT
           DELIMITER=$(openssl rand -hex 16)
