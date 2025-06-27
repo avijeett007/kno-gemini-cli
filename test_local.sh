@@ -7,7 +7,7 @@
 # 2. Your sample_cred.json file is in the project root.
 # 3. You have Node.js installed.
 
-# Exit immediately if a command exits with a non-zero status.
+# Exit immediately if a command exits with a non-zero status. show the error message
 set -e
 
 echo "--- Starting Local Test Simulation ---"
