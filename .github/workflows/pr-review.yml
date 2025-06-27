@@ -93,11 +93,31 @@ jobs:
           # Debug: Check the prompt file
           echo "Review prompt file created:"
           wc -l /tmp/review_prompt.txt
+          echo "First few lines of prompt:"
+          head -5 /tmp/review_prompt.txt
+          
+          # Test OAuth authentication separately
+          echo "Testing OAuth authentication..."
+          echo "Checking if credentials are valid JSON..."
+          echo "$GEMINI_OAUTH_CREDENTIALS_JSON" | jq . > /dev/null 2>&1
+          if [ $? -eq 0 ]; then
+            echo "✅ OAuth credentials are valid JSON"
+          else
+            echo "❌ OAuth credentials are not valid JSON"
+            exit 1
+          fi
           
           # Run the review using the prompt file with OAuth authentication
-          # Use --yolo flag to avoid interactive prompts in headless environment
+          # Use direct piping for non-interactive mode (faster than -p flag)
           echo "Running Gemini review with OAuth authentication..."
-          review_output=$(cat /tmp/review_prompt.txt | gemini --yolo -p)
+          echo "Step 1: About to pipe prompt to gemini CLI..."
+          
+          # Add timeout and more detailed debugging
+          set -o pipefail
+          review_output=$(timeout 300 cat /tmp/review_prompt.txt | gemini --yolo -p 2>&1)
+          exit_code=$?
+          
+          echo "Step 2: CLI execution completed with exit code: $exit_code"
           
           # Debug: Check the output
           if [ -n "$review_output" ]; then
@@ -106,6 +126,8 @@ jobs:
             echo "$review_output" | head -c 200
           else
             echo "❌ No review output generated"
+            echo "Exit code: $exit_code"
+            echo "This might indicate an authentication or CLI issue"
             exit 1
           fi
           
