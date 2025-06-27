@@ -1,6 +1,6 @@
 {
   "name": "kno-gemini-cli",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Gemini CLI fork to add support for github PR Review by Kno2gether. Made with love by @kno2gether (https://youtube.com/@kno2gether)",
   "type": "module",
   "main": "dist/index.js",
