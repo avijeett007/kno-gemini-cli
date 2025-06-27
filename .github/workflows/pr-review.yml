@@ -44,7 +44,7 @@ jobs:
           # Use a unique delimiter for GITHUB_OUTPUT to avoid issues with EOF in the output
           DELIMITER=$(openssl rand -hex 16)
 
-          review_output=$(gemini -p "$ESCAPED_PROMPT")
+          review_output=$(gemini -p $ESCAPED_PROMPT)
           echo "review<<$DELIMITER" >> $GITHUB_OUTPUT
           echo "$review_output" >> $GITHUB_OUTPUT
           echo "$DELIMITER" >> $GITHUB_OUTPUT
