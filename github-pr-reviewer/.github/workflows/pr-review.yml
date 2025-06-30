@@ -203,7 +203,11 @@ jobs:
 
       - name: Post Review Comment
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr comment $PR_NUMBER --body "**Gemini Code Review:**\n\n${{ steps.gemini_review.outputs.review }}"
+          # Create the review comment with proper escaping
+          review_body="**Gemini Code Review:**\n\n${{ steps.gemini_review.outputs.review }}\n\n---\n\n🤖 *This PR review was generated using [kno-gemini-cli](https://github.com/kno2gether/kno-gemini-cli), a fork of Gemini CLI that enables automated PR reviews for FREE. Made with ❤️ by [Kno2gether](https://www.youtube.com/@kno2gether). Subscribe to our channel for more developer tools and tutorials!*"
+          
+          # Use printf to properly handle the multi-line string
+          printf '%s' "$review_body" | gh pr comment $PR_NUMBER --body-file -
