@@ -91,11 +91,7 @@ jobs:
           echo "✅ OAuth credentials file created at $HOME/.gemini/oauth_creds.json"
           
           # Create a settings.json file that forces OAuth authentication
-          cat > $HOME/.gemini/settings.json << 'SETTINGS_EOF'
-          {
-            "selectedAuthType": "oauth-personal"
-          }
-          SETTINGS_EOF
+          echo '{"selectedAuthType": "oauth-personal"}' > $HOME/.gemini/settings.json
           echo "✅ Settings file created at $HOME/.gemini/settings.json"
           
           # Create a temporary file for the review prompt to avoid shell parsing issues
@@ -115,7 +111,6 @@ jobs:
           head -5 /tmp/review_prompt.txt
           
           # Run the review using the prompt file with OAuth authentication
-          # Use direct piping for non-interactive mode (faster than -p flag)
           echo "Running Gemini review with OAuth authentication..."
           echo "Step 1: About to pipe prompt to gemini CLI..."
           
@@ -153,11 +148,7 @@ jobs:
               echo "🔄 Switching to API key authentication..."
               
               # Create settings for API key authentication
-              cat > $HOME/.gemini/settings.json << 'API_KEY_EOF'
-              {
-                "selectedAuthType": "gemini-api-key"
-              }
-              API_KEY_EOF
+              echo '{"selectedAuthType": "gemini-api-key"}' > $HOME/.gemini/settings.json
               
               # Try again with API key
               echo "Retrying with API key authentication..."
