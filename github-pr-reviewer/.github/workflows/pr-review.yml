@@ -84,6 +84,7 @@ jobs:
         env:
           GEMINI_OAUTH_CREDENTIALS_JSON: ${{ secrets.GEMINI_OAUTH_CREDENTIALS_JSON }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PR_DIFF: ${{ steps.pr_diff.outputs.diff }}
         run: |
           # Debug: Check if credentials are set
           echo "Checking OAuth credentials..."
@@ -145,9 +146,8 @@ jobs:
           PROMPT_EOF
           
           # Append the diff to the prompt file (safely handle special characters)
-          cat >> /tmp/review_prompt.txt << 'DIFF_EOF'
-          ${{ steps.pr_diff.outputs.diff }}
-          DIFF_EOF
+          # Use environment variable to safely pass the diff content
+          echo "$PR_DIFF" >> /tmp/review_prompt.txt
           
           # Debug: Check the prompt file
           echo "Review prompt file created:"
@@ -217,6 +217,7 @@ jobs:
           # Clean up
           rm -f /tmp/review_prompt.txt
           rm -f /tmp/review_output.txt
+          rm -f /tmp/diff_content.txt
           rm -f $HOME/.gemini/settings.json
           rm -f $HOME/.gemini/oauth_creds.json
           
@@ -229,20 +230,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_OUTPUT: ${{ steps.gemini_review.outputs.review }}
         run: |
           # Create a temporary file for the review comment to avoid shell expansion issues
-          cat > /tmp/review_comment.md << COMMENT_EOF
-          **Gemini Code Review:**
+          echo "**Gemini Code Review:**" > /tmp/review_comment.md
+          echo "" >> /tmp/review_comment.md
+          echo "$REVIEW_OUTPUT" >> /tmp/review_comment.md
+          echo "" >> /tmp/review_comment.md
+          echo "---" >> /tmp/review_comment.md
+          echo "" >> /tmp/review_comment.md
+          echo "🤖 *This PR review was generated using [kno-gemini-cli](https://github.com/kno2gether/kno-gemini-cli), a fork of Gemini CLI that enables automated PR reviews for FREE. Made with ❤️ by [Kno2gether](https://www.youtube.com/@kno2gether). Subscribe to our channel for more developer tools and tutorials!*" >> /tmp/review_comment.md
 
-          ${{ steps.gemini_review.outputs.review }}
-
-          ---
-
-          🤖 *This PR review was generated using [kno-gemini-cli](https://github.com/kno2gether/kno-gemini-cli), a fork of Gemini CLI that enables automated PR reviews for FREE. Made with ❤️ by [Kno2gether](https://www.youtube.com/@kno2gether). Subscribe to our channel for more developer tools and tutorials!*
-          COMMENT_EOF
-          
           # Post the comment using the file
           gh pr comment $PR_NUMBER --body-file /tmp/review_comment.md
-          
+
           # Clean up
           rm /tmp/review_comment.md
