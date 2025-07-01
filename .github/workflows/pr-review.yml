@@ -20,10 +20,35 @@ jobs:
       - name: Get PR Diff
         id: pr_diff
         run: |
-          diff_content=$(git diff origin/${{ github.base_ref }}...origin/${{ github.head_ref }})
-          echo "diff<<EOF" >> $GITHUB_OUTPUT
-          echo "$diff_content" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Handle different PR scenarios (new PRs, updates, etc.)
+          if [ "${{ github.event.action }}" = "opened" ]; then
+            # For new PRs, compare with base branch
+            diff_content=$(git diff origin/${{ github.base_ref }}...HEAD)
+          else
+            # For updates, compare with base branch
+            diff_content=$(git diff origin/${{ github.base_ref }}...HEAD)
+          fi
+          
+          # Check if diff is empty (no changes)
+          if [ -z "$diff_content" ]; then
+            echo "⚠️ No changes detected in this PR"
+            diff_content="No code changes detected in this pull request."
+          fi
+          
+          # Check diff size and handle large PRs
+          diff_size=${#diff_content}
+          echo "📊 Diff size: $diff_size characters"
+          
+          # If diff is too large, truncate and add warning
+          if [ $diff_size -gt 500000 ]; then
+            echo "⚠️ Large PR detected (${diff_size} characters). Truncating to first 500K characters for review."
+            diff_content=$(echo "$diff_content" | head -c 500000)
+            diff_content="$diff_content"$'\n\n'"⚠️ **LARGE PR WARNING**: This PR contains more than 500K characters of changes. Only the first 500K characters are being reviewed. Consider breaking this into smaller PRs for better review quality."
+          fi
+          
+          # Use a unique delimiter to avoid conflicts
+          DELIMITER=$(openssl rand -hex 16)
+          printf "diff<<%s\n%s\n%s\n" "$DELIMITER" "$diff_content" "$DELIMITER" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,18 +57,27 @@ jobs:
 
       - name: Install GitHub CLI
         run: |
-          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-          && sudo apt update \
-          && sudo apt install gh -y
+          # GitHub CLI is pre-installed on GitHub Actions runners
+          # Just verify it's available
+          gh --version
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
 
       - name: Install Gemini CLI
         run: |
+          # Install kno-gemini-cli globally
           npm install -g kno-gemini-cli
+          
           # Verify installation
-          gemini --version || echo "Gemini CLI installation verification failed"
+          if gemini --version; then
+            echo "✅ Gemini CLI installed successfully"
+          else
+            echo "❌ Gemini CLI installation failed"
+            exit 1
+          fi
 
       - name: Run Gemini Review
         id: gemini_review
@@ -76,8 +110,7 @@ jobs:
           # Test OAuth authentication separately
           echo "Testing OAuth authentication..."
           echo "Checking if credentials are valid JSON..."
-          echo "$GEMINI_OAUTH_CREDENTIALS_JSON" | jq . > /dev/null 2>&1
-          if [ $? -eq 0 ]; then
+          if echo "$GEMINI_OAUTH_CREDENTIALS_JSON" | jq . > /dev/null 2>&1; then
             echo "✅ OAuth credentials are valid JSON"
           else
             echo "❌ OAuth credentials are not valid JSON"
@@ -94,15 +127,27 @@ jobs:
           echo '{"selectedAuthType": "oauth-personal"}' > $HOME/.gemini/settings.json
           echo "✅ Settings file created at $HOME/.gemini/settings.json"
           
-          # Create a temporary file for the review prompt to avoid shell parsing issues
+          # Create a language-agnostic review prompt optimized for large PRs
           cat > /tmp/review_prompt.txt << 'PROMPT_EOF'
-          You are an expert software engineer. Review the following code changes for potential bugs, style issues, and improvements. Provide your feedback as a list of concise points.
+          You are an expert software engineer with experience in multiple programming languages and frameworks. Review the following code changes for:
           
-          Diff:
+          1. **Critical issues** - Security vulnerabilities, data corruption, crashes
+          2. **Major bugs** - Logic errors, edge cases, incorrect behavior
+          3. **Code quality** - Readability, maintainability, best practices
+          4. **Performance** - Inefficient algorithms, resource usage
+          5. **Security** - Vulnerabilities, data exposure, input validation
+          6. **Style & conventions** - Language-specific best practices
+          7. **Documentation** - Missing comments, unclear code
+          
+          For large PRs, focus on the most important issues first. Provide your feedback as a clear, actionable list of points. Be specific about what should be changed and why. If the changes look good, mention that too.
+          
+          Code changes to review:
           PROMPT_EOF
           
-          # Append the diff to the prompt file
-          echo "${{ steps.pr_diff.outputs.diff }}" >> /tmp/review_prompt.txt
+          # Append the diff to the prompt file (safely handle special characters)
+          cat >> /tmp/review_prompt.txt << 'DIFF_EOF'
+          ${{ steps.pr_diff.outputs.diff }}
+          DIFF_EOF
           
           # Debug: Check the prompt file
           echo "Review prompt file created:"
@@ -110,69 +155,49 @@ jobs:
           echo "First few lines of prompt:"
           head -5 /tmp/review_prompt.txt
           
-          # Run the review using the prompt file with OAuth authentication
-          echo "Running Gemini review with OAuth authentication..."
-          echo "Step 1: About to pipe prompt to gemini CLI..."
-          
-          # Add timeout and more detailed debugging
+          # Run the review using stored OAuth credentials or API key
+          echo "Running Gemini review..."
           set -o pipefail
-          
-          # First attempt with OAuth - shorter timeout to detect authentication issues quickly
-          echo "Attempting OAuth authentication (timeout: 60 seconds)..."
-          review_output=$(timeout 60 cat /tmp/review_prompt.txt | gemini --yolo -p 2>&1)
+
+          # First attempt with stored OAuth credentials (quick timeout)
+          echo "🔐 Attempting OAuth with stored credentials..."
+          timeout 30 cat /tmp/review_prompt.txt | gemini --yolo -p > /tmp/review_output.txt 2>&1
           exit_code=$?
-          
-          echo "Step 2: CLI execution completed with exit code: $exit_code"
-          
-          # Check if authentication is required
-          if echo "$review_output" | grep -q "Code Assist login required"; then
-            echo "🔐 OAuth Authentication Required!"
-            echo "The CLI requires web authentication. Please visit the URL below to authenticate:"
-            echo ""
-            echo "$review_output" | grep -A 5 -B 5 "accounts.google.com"
-            echo ""
-            echo "⏰ Waiting 5 minutes for manual authentication..."
-            echo "If authentication is not completed within 5 minutes, will fall back to API key."
-            echo ""
-            
-            # Wait 5 minutes for manual authentication
-            for i in {1..30}; do
-              echo "Waiting... ($i/30) - $(date)"
-              sleep 10
-            done
-            
-            echo "⏰ 5 minutes elapsed. Trying API key fallback..."
-            
+          review_output=$(cat /tmp/review_output.txt)
+
+          echo "OAuth attempt completed with exit code: $exit_code"
+
+          # If OAuth fails or requires manual authentication, immediately try API key
+          if [ $exit_code -ne 0 ] || echo "$review_output" | grep -q "Code Assist login required\|authentication\|login"; then
+            echo "🔄 OAuth failed, switching to API key authentication..."
+
             # Try API key fallback if available
             if [ -n "$GEMINI_API_KEY" ]; then
-              echo "🔄 Switching to API key authentication..."
-              
               # Create settings for API key authentication
               echo '{"selectedAuthType": "gemini-api-key"}' > $HOME/.gemini/settings.json
-              
-              # Try again with API key
-              echo "Retrying with API key authentication..."
-              review_output=$(timeout 300 cat /tmp/review_prompt.txt | gemini --yolo -p 2>&1)
+
+              echo "🔑 Retrying with API key..."
+              timeout 60 cat /tmp/review_prompt.txt | gemini --yolo -p > /tmp/review_output.txt 2>&1
               exit_code=$?
-              
+              review_output=$(cat /tmp/review_output.txt)
+
               if [ $exit_code -eq 0 ] && [ -n "$review_output" ]; then
                 echo "✅ Successfully authenticated with API key!"
               else
                 echo "❌ API key authentication also failed"
-                echo "Please complete the OAuth authentication manually using the URL above."
-                echo ""
                 echo "Full CLI output for debugging:"
                 echo "$review_output"
                 exit 1
               fi
             else
               echo "❌ No API key available for fallback"
-              echo "Please complete the OAuth authentication manually using the URL above."
-              echo ""
+              echo "OAuth failed and no API key provided"
               echo "Full CLI output for debugging:"
               echo "$review_output"
               exit 1
             fi
+          else
+            echo "✅ OAuth authentication successful!"
           fi
           
           # Debug: Check the output
@@ -190,16 +215,15 @@ jobs:
           fi
           
           # Clean up
-          rm /tmp/review_prompt.txt
+          rm -f /tmp/review_prompt.txt
+          rm -f /tmp/review_output.txt
           rm -f $HOME/.gemini/settings.json
           rm -f $HOME/.gemini/oauth_creds.json
           
           # Use a unique delimiter for GITHUB_OUTPUT
           DELIMITER=$(openssl rand -hex 16)
           
-          echo "review<<$DELIMITER" >> $GITHUB_OUTPUT
-          echo "$review_output" >> $GITHUB_OUTPUT
-          echo "$DELIMITER" >> $GITHUB_OUTPUT
+          printf "review<<%s\n%s\n%s\n" "$DELIMITER" "$review_output" "$DELIMITER" >> $GITHUB_OUTPUT
 
       - name: Post Review Comment
         env:
@@ -207,13 +231,13 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # Create a temporary file for the review comment to avoid shell expansion issues
-          cat > /tmp/review_comment.md << 'COMMENT_EOF'
+          cat > /tmp/review_comment.md << COMMENT_EOF
           **Gemini Code Review:**
-          
+
           ${{ steps.gemini_review.outputs.review }}
-          
+
           ---
-          
+
           🤖 *This PR review was generated using [kno-gemini-cli](https://github.com/kno2gether/kno-gemini-cli), a fork of Gemini CLI that enables automated PR reviews for FREE. Made with ❤️ by [Kno2gether](https://www.youtube.com/@kno2gether). Subscribe to our channel for more developer tools and tutorials!*
           COMMENT_EOF
           
